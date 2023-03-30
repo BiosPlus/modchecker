@@ -99,7 +99,6 @@ function main() {
   local access_token=$(get_access_token)
 
   for subreddit in "${SUBREDDITS[@]}"; do
-    echo "Scanning subreddit: $subreddit"
     local all_inactive=true
     local mods=$(get_mods "$subreddit" "$access_token")
     local mod_data="["
@@ -107,14 +106,12 @@ function main() {
     local i=1
     declare -A mod_map
     for mod in $mods; do
-      if is_excluded "$mod"; then
-        continue
-      fi
-
       local last_activity=$(get_last_activity "$mod" "$access_token")
       mod_map[$i]=$mod
 
-      echo "[$i] Moderator: $mod, Days remaining until inactive: $((30 - last_activity))"
+      if ! $SILENT; then
+        echo "[$i] Moderator: $mod, Days remaining until inactive: $((30 - last_activity))"
+      fi
 
       if [[ "$last_activity" -lt 30 ]]; then
         all_inactive=false
@@ -132,7 +129,11 @@ function main() {
 
     if $all_inactive; then
       echo "Subreddit: $subreddit is inactive and open for sniping"
-    else
+    elif ! $SILENT; then
+      echo "Subreddit: $subreddit is active"
+    fi
+
+    if $INTERACTIVE_BOTS && ! $SILENT; then
       echo "Enter the numbers or names of moderators you think may be bots (separated by spaces):"
       read -a suspected_bots
 
