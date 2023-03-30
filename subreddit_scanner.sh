@@ -85,6 +85,12 @@ function update_json() {
   echo "$output" > "./config/subreddits/$subreddit.json"
 }
 
+function get_global_exclude() {
+  if [ -f "./config/global_exclude.json" ]; then
+    cat "./config/global_exclude.json" | jq -r '.[]'
+  fi
+}
+
 function add_to_global_exclude() {
   local bots="$1"
   local current_data=$(cat "./config/global_exclude.json" 2>/dev/null)
@@ -97,6 +103,7 @@ function add_to_global_exclude() {
 
 function main() {
   local access_token=$(get_access_token)
+  local global_exclude=($(get_global_exclude))
 
   for subreddit in "${SUBREDDITS[@]}"; do
     local all_inactive=true
@@ -106,22 +113,24 @@ function main() {
     local i=1
     declare -A mod_map
     for mod in $mods; do
-      local last_activity=$(get_last_activity "$mod" "$access_token")
-      mod_map[$i]=$mod
+      if [[ " ${global_exclude[*]} " != *"$mod"* ]]; then
+        local last_activity=$(get_last_activity "$mod" "$access_token")
+        mod_map[$i]=$mod
 
-      if ! $SILENT; then
-        echo "[$i] Moderator: $mod, Days remaining until inactive: $((30 - last_activity))"
-      fi
+        if ! $SILENT; then
+          echo "[$i] Moderator: $mod, Days remaining until inactive: $((30 - last_activity))"
+        fi
 
-      if [[ "$last_activity" -lt 30 ]]; then
-        all_inactive=false
-      fi
+        if [[ "$last_activity" -lt 30 ]]; then
+          all_inactive=false
+        fi
 
-      mod_data+="{\"name\": \"$mod\", \"days_remaining\": $((30 - last_activity))}"
-      if [ $i -lt ${#mods[@]} ]; then
-        mod_data+=", "
+        mod_data+="{\"name\": \"$mod\", \"days_remaining\": $((30 - last_activity))}"
+        if [ $i -lt ${#mods[@]} ]; then
+          mod_data+=", "
+        fi
+        i=$((i + 1))
       fi
-      i=$((i + 1))
     done
 
     mod_data+="]"
@@ -152,5 +161,6 @@ function main() {
     fi
   done
 }
+
 
 main
