@@ -20,7 +20,7 @@ ModChecker is a modular Bash script that scans specified Reddit subreddits and c
 
 Add your Reddit API credentials to `./config/credentials.json`:
 
-   ```json
+```json
    {
      "client_id": "YOUR_CLIENT_ID",
      "client_secret": "YOUR_CLIENT_SECRET",
