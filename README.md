@@ -4,11 +4,30 @@ ModChecker is a modular Bash script that scans specified Reddit subreddits and c
 
 ## Features
 
-- Scans through a list of subreddits provided via command line arguments or text file.
-- Fetches a list of moderators for each subreddit and checks their recent activity (posts and comments).
-- Outputs the activity countdown for each moderator until they reach 30 days of inactivity.
-- Generates and updates JSON files with the subreddit scan results in `./config/subreddits/`.
-- Allows users to flag suspected bot moderators and adds them to a global exclude list in `./config/global_exclude.json`.
+- Scans subreddits for moderator activity
+- Identifies inactive moderators based on a 30-day inactivity threshold
+- Excludes known bot accounts from scanning
+- Automatically scans subreddits with JSON files in the `config/subreddits/` directory
+- Stores subreddit scan data in JSON files for future reference
+
+## Prerequisites
+
+- Bash
+- [curl](https://curl.se/)
+- [jq](https://stedolan.github.io/jq/)
+
+## Configuration
+
+Add your Reddit API credentials to `./config/credentials.json`:
+
+   ```json
+   {
+     "client_id": "YOUR_CLIENT_ID",
+     "client_secret": "YOUR_CLIENT_SECRET",
+     "username": "YOUR_USERNAME",
+     "password": "YOUR_PASSWORD"
+   }
+```
 
 ## Usage
 
@@ -25,9 +44,10 @@ For each subreddit, the script will print the activity countdown for each modera
 
 After scanning each subreddit, the user will be prompted to enter the names or numbers of moderators they think may be bots. The suspected bot moderators will be added to the `./config/global_exclude.json` file, which will be used as a reference for excluding moderators from future checks.
 
-## Configuration
-Edit the `CLIENT_ID`, `CLIENT_SECRET`, `USERNAME`, and `PASSWORD` variables at the beginning of the script to match your Reddit app credentials and Reddit account.
-Add or remove subreddits to scan by providing them as command line arguments or by editing the JSON files in the `./config/subreddits/` directory.
+## Contributing
 
-## Dependencies
-jq - A lightweight and flexible command-line JSON processor. It's required for handling JSON data within the script.
+Contributions are welcome! Feel free to submit issues or pull requests to improve the project.
+
+# License
+
+This project is licensed under the MIT License.
