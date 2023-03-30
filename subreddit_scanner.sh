@@ -5,11 +5,20 @@ CREDENTIALS_FILE="$CONFIG_DIR/credentials.json"
 
 declare -a SUBREDDITS
 
+INTERACTIVE_BOTS=false
+SILENT=false
+
 while [[ "$#" -gt 0 ]]; do
   case $1 in
     -sr|--subreddit)
       shift
       SUBREDDITS+=("$1")
+      ;;
+    -ib|--interactive-bots)
+      INTERACTIVE_BOTS=true
+      ;;
+    -s|--silent)
+      SILENT=true
       ;;
     *)
       echo "Unknown parameter: $1"
@@ -18,6 +27,7 @@ while [[ "$#" -gt 0 ]]; do
   esac
   shift
 done
+
 
 if [ ${#SUBREDDITS[@]} -eq 0 ]; then
   for file in "$CONFIG_DIR/subreddits"/*.json; do
