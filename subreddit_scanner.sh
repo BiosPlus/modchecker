@@ -66,8 +66,13 @@ function get_last_activity() {
   local access_token="$2"
   local now=$(date +%s)
   
-  local last_post_activity=$(curl -s -H "Authorization: bearer $access_token" -A "ModChecker/0.1" "https://oauth.reddit.com/user/$user/submitted?limit=5" | jq -r '.data.children[].data.created_utc')
-  local last_comment_activity=$(curl -s -H "Authorization: bearer $access_token" -A "ModChecker/0.1" "https://oauth.reddit.com/user/$user/comments?limit=5" | jq -r '.data.children[].data.created_utc')
+  local last_post_activity=$(curl -s -H "Authorization: bearer $access_token" -A "ModChecker/0.1" "https://oauth.reddit.com/user/$user/submitted?limit=5" | jq -r '.data.children[].data.created_utc' 2>/dev/null)
+  local last_comment_activity=$(curl -s -H "Authorization: bearer $access_token" -A "ModChecker/0.1" "https://oauth.reddit.com/user/$user/comments?limit=5" | jq -r '.data.children[].data.created_utc' 2>/dev/null)
+
+  if [[ -z "$last_post_activity" && -z "$last_comment_activity" ]]; then
+    echo "unknown"
+    return
+  fi
 
   local all_activity=($last_post_activity $last_comment_activity)
   local most_recent_activity=0
@@ -124,16 +129,23 @@ function main() {
     for mod in $mods; do
       if [[ " ${global_exclude[*]} " != *"$mod"* ]]; then
         local last_activity=$(get_last_activity "$mod" "$access_token")
+
+        if [[ "$last_activity" == "unknown" ]]; then
+          # Yellow color for unknown activity
+          if ! $SILENT; then
+            printf "\e[33m[$i] Moderator: $mod, Days remaining until inactive: unknown\e[0m\n"
+          fi
+        else
+          if ! $SILENT; then
+            echo "[$i] Moderator: $mod, Days remaining until inactive: $((30 - last_activity))"
+          fi
+
+          if [[ "$last_activity" -lt 30 ]]; then
+            all_inactive=false
+          fi
+        fi
+
         mod_map[$i]=$mod
-
-        if ! $SILENT; then
-          echo "[$i] Moderator: $mod, Days remaining until inactive: $((30 - last_activity))"
-        fi
-
-        if [[ "$last_activity" -lt 30 ]]; then
-          all_inactive=false
-        fi
-
         mod_data+="{\"name\": \"$mod\", \"days_remaining\": $((30 - last_activity))}"
         if [ $i -lt ${#mods[@]} ]; then
           mod_data+=", "
