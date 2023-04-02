@@ -8,6 +8,7 @@ declare -a SUBREDDITS
 INTERACTIVE_BOTS=false
 SILENT=false
 
+# Command-line arguments processing
 while [[ "$#" -gt 0 ]]; do
   case $1 in
     -sr|--subreddit)
@@ -40,22 +41,26 @@ CLIENT_SECRET=$(jq -r '.client_secret' $CREDENTIALS_FILE)
 USERNAME=$(jq -r '.username' $CREDENTIALS_FILE)
 PASSWORD=$(jq -r '.password' $CREDENTIALS_FILE)
 
+# Function to check if a moderator is in the global exclude list
 function is_excluded() {
   local mod_name="$1"
   local excluded_mods=$(jq '.[]' "$CONFIG_DIR/global_exclude.json" 2>/dev/null)
   [[ $excluded_mods =~ $mod_name ]]
 }
 
+# Function to get an access token for the Reddit API
 function get_access_token() {
   curl -s -X POST -d "grant_type=password&username=$USERNAME&password=$PASSWORD" --user "$CLIENT_ID:$CLIENT_SECRET" -H "User-Agent: ModChecker/0.1" https://www.reddit.com/api/v1/access_token | jq -r '.access_token'
 }
 
+# Function to get a list of moderators for a subreddit
 function get_mods() {
   local subreddit="$1"
   local access_token="$2"
   curl -s -H "Authorization: bearer $access_token" -A "ModChecker/0.1" "https://oauth.reddit.com/r/$subreddit/about/moderators" | jq -r '.data.children[].name'
 }
 
+# Function to get the number of days since a user's last activity
 function get_last_activity() {
   local user="$1"
   local access_token="$2"
@@ -76,6 +81,7 @@ function get_last_activity() {
   echo $(( (now - most_recent_activity) / 86400 ))
 }
 
+# Function to update the JSON file with information about subreddit moderators and their activity
 function update_json() {
   local subreddit="$1"
   local last_scanned=$(date +%s)
@@ -85,12 +91,14 @@ function update_json() {
   echo "$output" > "./config/subreddits/$subreddit.json"
 }
 
+# Function to add specified moderators to the global exclude list
 function get_global_exclude() {
   if [ -f "./config/global_exclude.json" ]; then
     cat "./config/global_exclude.json" | jq -r '.[]'
   fi
 }
 
+# Function to add specified moderators to the global exclude list
 function add_to_global_exclude() {
   local bots="$1"
   local current_data=$(cat "./config/global_exclude.json" 2>/dev/null)
@@ -101,6 +109,7 @@ function add_to_global_exclude() {
   echo "$updated_data" > "./config/global_exclude.json"
 }
 
+# Main function of the script
 function main() {
   local access_token=$(get_access_token)
   local global_exclude=($(get_global_exclude))
