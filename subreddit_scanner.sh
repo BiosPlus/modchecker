@@ -60,6 +60,21 @@ function get_mods() {
   curl -s -H "Authorization: bearer $access_token" -A "ModChecker/0.1" "https://oauth.reddit.com/r/$subreddit/about/moderators" | jq -r '.data.children[].name'
 }
 
+# Function to check a user's activity and output the result
+function check_user_activity() {
+  local mod="$1"
+  local access_token="$2"
+  local idx="$3"
+  local last_activity=$(get_last_activity "$mod" "$access_token")
+
+  if [[ "$last_activity" == "unknown" ]]; then
+    # Yellow color for unknown activity
+    printf "\e[33m[$idx] Moderator: $mod, Days remaining until inactive: unknown\e[0m\n"
+  else
+    echo "[$idx] Moderator: $mod, Days remaining until inactive: $((30 - last_activity))"
+  fi
+}
+
 # Function to get the number of days since a user's last activity
 function get_last_activity() {
   local user="$1"
@@ -128,31 +143,17 @@ function main() {
     declare -A mod_map
     for mod in $mods; do
       if [[ " ${global_exclude[*]} " != *"$mod"* ]]; then
-        local last_activity=$(get_last_activity "$mod" "$access_token")
-
-        if [[ "$last_activity" == "unknown" ]]; then
-          # Yellow color for unknown activity
-          if ! $SILENT; then
-            printf "\e[33m[$i] Moderator: $mod, Days remaining until inactive: unknown\e[0m\n"
-          fi
-        else
-          if ! $SILENT; then
-            echo "[$i] Moderator: $mod, Days remaining until inactive: $((30 - last_activity))"
-          fi
-
-          if [[ "$last_activity" -lt 30 ]]; then
-            all_inactive=false
-          fi
-        fi
-
         mod_map[$i]=$mod
-        mod_data+="{\"name\": \"$mod\", \"days_remaining\": $((30 - last_activity))}"
-        if [ $i -lt ${#mods[@]} ]; then
-          mod_data+=", "
+
+        if ! $SILENT; then
+          check_user_activity "$mod" "$access_token" "$i" &
         fi
+
         i=$((i + 1))
       fi
     done
+
+    wait
 
     mod_data+="]"
     update_json "$subreddit" "$mod_data"
@@ -166,7 +167,7 @@ function main() {
     if $INTERACTIVE_BOTS && ! $SILENT; then
       echo "Enter the numbers or names of moderators you think may be bots (separated by spaces):"
       read -a suspected_bots
-
+      
       local bots="[]"
       for suspect in "${suspected_bots[@]}"; do
         if [[ "$suspect" =~ ^[0-9]+$ ]] && [[ -n "${mod_map[$suspect]}" ]]; then
@@ -182,6 +183,5 @@ function main() {
     fi
   done
 }
-
 
 main
